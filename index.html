@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .calculator {
+      background: #1c1c1c;
+      border-radius: 16px;
+      padding: 20px;
+      width: 100%;
+      max-width: 320px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .display {
+      background: #2b2b2b;
+      color: #ffffff;
+      font-size: 2.2rem;
+      text-align: right;
+      padding: 20px 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      overflow-x: auto;
+      white-space: nowrap;
+      min-height: 80px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      font-size: 1.3rem;
+      padding: 18px 0;
+      cursor: pointer;
+      background: #3a3a3a;
+      color: #ffffff;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    button:hover {
+      background: #4a4a4a;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    button.operator {
+      background: #ff9500;
+    }
+
+    button.operator:hover {
+      background: #ffaa33;
+    }
+
+    button.function {
+      background: #a5a5a5;
+      color: #000000;
+    }
+
+    button.function:hover {
+      background: #b8b8b8;
+    }
+
+    button.equals {
+      background: #34c759;
+    }
+
+    button.equals:hover {
+      background: #4cd471;
+    }
+
+    button.zero {
+      grid-column: span 2;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="calculator">
+    <div class="display" id="display">0</div>
+    <div class="buttons">
+      <button class="function" data-action="clear">AC</button>
+      <button class="function" data-action="backspace">⌫</button>
+      <button class="function" data-action="percent">%</button>
+      <button class="operator" data-value="/">÷</button>
+
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button class="operator" data-value="*">×</button>
+
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button class="operator" data-value="-">−</button>
+
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button class="operator" data-value="+">+</button>
+
+      <button class="zero" data-value="0">0</button>
+      <button data-value=".">.</button>
+      <button class="equals" data-action="calculate">=</button>
+    </div>
+  </div>
+
+  <script>
+    const display = document.getElementById('display');
+    let expression = '';
+
+    function updateDisplay() {
+      display.textContent = expression === '' ? '0' : expression;
+    }
+
+    function appendValue(value) {
+      const operators = ['+', '-', '*', '/'];
+      const lastChar = expression.slice(-1);
+
+      // Prevent two operators in a row: replace the previous one
+      if (operators.includes(value) && operators.includes(lastChar)) {
+        expression = expression.slice(0, -1) + value;
+      } else if (value === '.') {
+        // Prevent multiple decimals in the same number
+        const parts = expression.split(/[\+\-\*\/]/);
+        const currentNumber = parts[parts.length - 1];
+        if (!currentNumber.includes('.')) {
+          expression += value;
+        }
+      } else {
+        expression += value;
+      }
+      updateDisplay();
+    }
+
+    function clearAll() {
+      expression = '';
+      updateDisplay();
+    }
+
+    function backspace() {
+      expression = expression.slice(0, -1);
+      updateDisplay();
+    }
+
+    function percent() {
+      if (expression === '') return;
+      // Convert the last number into a percentage (divide by 100)
+      const parts = expression.split(/([\+\-\*\/])/);
+      const last = parts.length - 1;
+      if (parts[last] !== '' && !isNaN(parts[last])) {
+        parts[last] = String(parseFloat(parts[last]) / 100);
+        expression = parts.join('');
+      }
+      updateDisplay();
+    }
+
+    function calculate() {
+      if (expression === '') return;
+
+      // Only allow numbers, operators, decimal points, and spaces
+      if (!/^[0-9+\-*/.]+$/.test(expression)) {
+        display.textContent = 'Error';
+        expression = '';
+        return;
+      }
+
+      try {
+        const result = Function('"use strict"; return (' + expression + ')')();
+
+        if (!isFinite(result)) {
+          throw new Error('Invalid result');
+        }
+
+        // Round to avoid long decimal tails like 0.30000000000000004
+        expression = String(parseFloat(result.toFixed(10)));
+        updateDisplay();
+      } catch (error) {
+        display.textContent = 'Error';
+        expression = '';
+      }
+    }
+
+    // Mouse / touch button clicks
+    document.querySelector('.buttons').addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+
+      const action = button.dataset.action;
+      const value = button.dataset.value;
+
+      if (action === 'clear') clearAll();
+      else if (action === 'backspace') backspace();
+      else if (action === 'percent') percent();
+      else if (action === 'calculate') calculate();
+      else if (value !== undefined) appendValue(value);
+    });
+
+    // Keyboard support
+    document.addEventListener('keydown', (event) => {
+      const key = event.key;
+
+      if (/[0-9]/.test(key)) appendValue(key);
+      else if (['+', '-', '*', '/', '.'].includes(key)) appendValue(key);
+      else if (key === 'Enter' || key === '=') {
+        event.preventDefault();
+        calculate();
+      }
+      else if (key === 'Backspace') backspace();
+      else if (key === 'Escape') clearAll();
+      else if (key === '%') percent();
+    });
+
+    updateDisplay();
+  </script>
+
+</body>
+</html>
